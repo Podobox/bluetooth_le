@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/device_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nom de l'appareil"
+        android:textStyle="bold"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/device_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Adresse MAC"
+        android:textSize="14sp"
+        android:textColor="#555555" />
+
+    <TextView
+        android:id="@+id/device_rssi"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="RSSI"
+        android:textSize="14sp"
+        android:textColor="#777777" />
+
+</LinearLayout>
