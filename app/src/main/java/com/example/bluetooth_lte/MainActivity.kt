@@ -1,5 +1,7 @@
 package com.example.bluetooth_lte
-
+/* TO DO
+Ajuster la variable REQUEST_BLUETOOTH_CONNECT_PERMISSION
+*/
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -39,7 +41,6 @@ class MainActivity : AppCompatActivity() {
     private val seenDevices = mutableSetOf<String>()
     private var scanning = false
     private val scanPeriod: Long = 10000 // 10 secondes
-    private var bluetoothGatt: BluetoothGatt? = null // Gestion de la connexion
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,7 +81,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Connexion à ${scanResult.device.address}...", Toast.LENGTH_SHORT)
             .show()
 
-        bluetoothGatt =
+        BluetoothManagerSingleton.bluetoothGatt =
             scanResult.device.connectGatt(this, false, object : BluetoothGattCallback() {
                 override fun onConnectionStateChange(
                     gatt: BluetoothGatt,
