@@ -41,7 +41,7 @@ android {
 }
 
 dependencies {
-
+    implementation("no.nordicsemi.android:ble-ktx:2.10.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

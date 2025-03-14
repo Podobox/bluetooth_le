@@ -3,7 +3,6 @@ package com.example.bluetooth_lte
 import android.Manifest
 import android.bluetooth.le.ScanResult
 import android.content.pm.PackageManager
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

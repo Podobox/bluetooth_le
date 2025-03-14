@@ -5,10 +5,7 @@ Ajuster la variable REQUEST_BLUETOOTH_CONNECT_PERMISSION
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
@@ -20,7 +17,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -41,6 +37,8 @@ class MainActivity : AppCompatActivity() {
     private val seenDevices = mutableSetOf<String>()
     private var scanning = false
     private val scanPeriod: Long = 10000 // 10 secondes
+    private lateinit var bleManager: MyBleManager
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,58 +63,34 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     private fun connectToDevice(scanResult: ScanResult) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12+
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
-                    REQUEST_BLUETOOTH_CONNECT_PERMISSION
-                )
-                return
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
+                REQUEST_BLUETOOTH_CONNECT_PERMISSION
+            )
+            return
         }
 
-        Toast.makeText(this, "Connexion à ${scanResult.device.address}...", Toast.LENGTH_SHORT)
-            .show()
+        bleManager = MyBleManager(this)
 
-        BluetoothManagerSingleton.bluetoothGatt =
-            scanResult.device.connectGatt(this, false, object : BluetoothGattCallback() {
-                override fun onConnectionStateChange(
-                    gatt: BluetoothGatt,
-                    status: Int,
-                    newState: Int
-                ) {
-                    if (newState == BluetoothProfile.STATE_CONNECTED) {
-                        runOnUiThread {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Connexion réussie !",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            gatt.discoverServices() // Découverte des services GATT
-                        }
-                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                        runOnUiThread {
-                            Toast.makeText(this@MainActivity, "Déconnecté", Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                    }
-                }
-
-                override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-                    if (status == BluetoothGatt.GATT_SUCCESS) {
-                        runOnUiThread {
-                            val intent =
-                                Intent(this@MainActivity, DeviceDetailsActivity::class.java)
-                            intent.putExtra("deviceName", gatt.device.name ?: "Inconnu")
-                            intent.putExtra("deviceAddress", gatt.device.address)
-                            startActivity(intent)
-                        }
-                    }
-                }
-            })
+        bleManager.connect(scanResult.device)
+            .retry(3, 100)
+            .useAutoConnect(false)
+            .done {
+                Toast.makeText(this, "Connecté à ${scanResult.device.address}", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, DeviceDetailsActivity::class.java)
+                intent.putExtra("deviceName", scanResult.device.name ?: "Inconnu")
+                intent.putExtra("deviceAddress", scanResult.device.address)
+                startActivity(intent)
+            }
+            .fail { _, status ->
+                Toast.makeText(this, "Échec de connexion : $status", Toast.LENGTH_SHORT).show()
+            }
+            .enqueue()
     }
 
     companion object {
