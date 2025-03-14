@@ -14,17 +14,19 @@ import java.util.UUID
 
 class MyBleManager(context: Context) : BleManager(context) {
 
-    private var modelNumberCharacteristic: BluetoothGattCharacteristic? = null
+    private var buttonCharacteristic: BluetoothGattCharacteristic? = null
     private val defaultScope = CoroutineScope(Dispatchers.Main)
+    private val notificationChannel = Channel<String>() // Canal pour gérer les notifications reçues
 
     companion object {
-        // private val SERVICE_UUID: UUID = UUID.fromString("00001523-1212-efde-1523-785feabcd123")
-        // private val CHARACTERISTIC_UUID: UUID = UUID.fromString("80323644-3537-4F0B-A53B-CF494ECEAAB3")
+        private val SERVICE_UUID: UUID = UUID.fromString("00001523-1212-efde-1523-785feabcd123")
+        private val CHARACTERISTIC_UUID: UUID = UUID.fromString("00001524-1212-efde-1523-785feabcd123")
         private const val BLE_APP = "BLE_APP"
     }
 
-    // Canal pour gérer les notifications reçues
-    private val notificationChannel = Channel<String>()
+    fun getNotificationChannel(): Channel<String> {
+        return notificationChannel
+    }
 
     override fun getGattCallback(): BleManagerGattCallback {
         return MyGattCallback()
@@ -36,14 +38,22 @@ class MyBleManager(context: Context) : BleManager(context) {
             Log.d(BLE_APP, "Services disponibles :")
             for (service in gatt.services) {
                 Log.d(BLE_APP, "Service UUID : ${service.uuid}")
+                if (service.uuid == SERVICE_UUID) {
+                    for (characteristic in service.characteristics) {
+                        if (characteristic.uuid == CHARACTERISTIC_UUID) {
+                            Log.d(BLE_APP, "Caractéristique UUID : ${characteristic.uuid}")
+                        }
+                    }
+                    buttonCharacteristic = service.getCharacteristic(CHARACTERISTIC_UUID)
+                }
             }
 
-            if (modelNumberCharacteristic == null) {
+            if (buttonCharacteristic == null) {
                 Log.e(BLE_APP, "Erreur : Caractéristique non trouvée !")
-                return true
+                return false
             }
 
-            val properties = modelNumberCharacteristic!!.properties
+            val properties = buttonCharacteristic!!.properties
             val readSupport = properties and BluetoothGattCharacteristic.PROPERTY_READ != 0
             val notifySupport = properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0
 
@@ -51,9 +61,7 @@ class MyBleManager(context: Context) : BleManager(context) {
         }
 
         override fun initialize() {
-            Log.d(BLE_APP, "Initialisation de la connexion BLE")
-
-            setNotificationCallback(modelNumberCharacteristic).with { _, data ->
+            setNotificationCallback(buttonCharacteristic).with { _, data ->
                 if (data.value != null) {
                     val value = String(data.value!!, Charsets.UTF_8)
                     defaultScope.launch {
@@ -63,9 +71,9 @@ class MyBleManager(context: Context) : BleManager(context) {
             }
 
             beginAtomicRequestQueue()
-                .add(enableNotifications(modelNumberCharacteristic)
+                .add(enableNotifications(buttonCharacteristic)
                     .fail { _: BluetoothDevice, status: Int ->
-                        Log.e(BLE_APP, "Erreur d'abonnement aux notifications : $status")
+                        Log.e(BLE_APP, "Erreur notifications : $status")
                         disconnect().enqueue()
                     }
                 )
@@ -76,32 +84,33 @@ class MyBleManager(context: Context) : BleManager(context) {
         }
 
         override fun onServicesInvalidated() {
-            modelNumberCharacteristic = null
+            buttonCharacteristic = null
         }
+
     }
 
-    fun readModelNumber(callback: (String) -> Unit) {
-        modelNumberCharacteristic?.let {
-            readCharacteristic(it)
-                .with { _, data -> callback(data.getStringValue(0) ?: "Inconnu") }
-                .fail { _, status -> Log.e(BLE_APP, "Erreur de lecture : $status") }
-                .enqueue()
-        } ?: callback("Caractéristique non disponible")
-    }
 
-    fun enableNotifications() {
-        if (modelNumberCharacteristic == null) {
-            Log.e(BLE_APP, "Caractéristique de notification non disponible !")
+    fun readButtonValue(callback: (String) -> Unit) {
+        if (buttonCharacteristic == null) {
+            Log.e("BLE_SERVICE", "Erreur lors de la lecture de la caractéristique")
+            callback("Caractéristique non disponible")
             return
         }
+        else if (!isReadSupported(buttonCharacteristic)){
+            Log.e("BLE_SERVICE", "Lecture impossible")
+            return
+        }else {
+            buttonCharacteristic.let {
+                readCharacteristic(it)
+                    .with { _, data -> callback(data.getStringValue(0) ?: "Inconnu") }
+                    .fail { _, status -> Log.e(BLE_APP, "Erreur de lecture : $status") }
+                    .enqueue()
+            }
 
-        enableNotifications(modelNumberCharacteristic)
-            .fail { _: BluetoothDevice, status: Int ->
-                Log.e(BLE_APP, "Erreur d'abonnement aux notifications: $status")
-            }
-            .done {
-                Log.d(BLE_APP, "Abonnement aux notifications réussi")
-            }
-            .enqueue()
+        }
+    }
+
+    private fun isReadSupported(characteristic: BluetoothGattCharacteristic?): Boolean {
+        return (characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_READ) != 0
     }
 }

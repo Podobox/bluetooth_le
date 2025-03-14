@@ -29,10 +29,18 @@
         android:layout_marginTop="8dp"/>
 
     <TextView
-        android:id="@+id/modelNumberTextView"
+        android:id="@+id/buttonValueTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Modèle : "
+        android:text="État du bouton : "
         android:textSize="15sp"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/readButtonValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Lire état du bouton"
+        android:layout_marginTop="16dp"/>
+
 </LinearLayout>

@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        bleManager = MyBleManager(this)
+        bleManager = BleManagerSingleton.getInstance(this)
 
         bleManager.connect(scanResult.device)
             .retry(3, 100)
