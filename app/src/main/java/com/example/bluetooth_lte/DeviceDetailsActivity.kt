@@ -35,27 +35,29 @@ class DeviceDetailsActivity() : AppCompatActivity() {
             disconnectDevice()
         }
 
-        listenForButtonNotifications()
+//        listenForButtonNotifications()
 
     }
 
     private fun readButtonValue() {
         bleManager.readButtonValue { value ->
             runOnUiThread {
+                Log.d("BLE_BUTTON", "value : $value")
                 buttonValueTextView.text = "État du bouton : ${if (value == "1") "ON" else "OFF"}"
             }
         }
     }
 
-    private fun listenForButtonNotifications() {
+    /*private fun listenForButtonNotifications() {
         lifecycleScope.launch {
             for (value in bleManager.getNotificationChannel()) {
                 runOnUiThread {
+                    Log.d("BLE_BUTTON", "value : $value")
                     buttonValueTextView.text = "État du bouton : ${if (value == "1") "Enfoncé" else "Relâché"}"
                 }
             }
         }
-    }
+    }*/
 
     private fun disconnectDevice() {
         bleManager.disconnect().enqueue()

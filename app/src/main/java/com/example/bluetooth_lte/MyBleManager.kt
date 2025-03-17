@@ -91,6 +91,10 @@ class MyBleManager(context: Context) : BleManager(context) {
 
 
     fun readButtonValue(callback: (String) -> Unit) {
+        if (!isConnected) {
+            Log.e(BLE_APP, "Erreur : périphérique déconnecté")
+            return
+        }
         if (buttonCharacteristic == null) {
             Log.e("BLE_SERVICE", "Erreur lors de la lecture de la caractéristique")
             callback("Caractéristique non disponible")
@@ -102,7 +106,15 @@ class MyBleManager(context: Context) : BleManager(context) {
         }else {
             buttonCharacteristic.let {
                 readCharacteristic(it)
-                    .with { _, data -> callback(data.getStringValue(0) ?: "Inconnu") }
+                    .with { _, data ->
+                        val rawBytes = data.value
+                        if (rawBytes != null && rawBytes.isNotEmpty()) {
+                            val intValue = rawBytes[0].toInt() // Lire le premier octet en entier
+                            callback(intValue.toString())
+                        } else {
+                            callback("N/A")
+                        }
+                    }
                     .fail { _, status -> Log.e(BLE_APP, "Erreur de lecture : $status") }
                     .enqueue()
             }
